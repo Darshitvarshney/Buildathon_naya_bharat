@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables (API keys)
+.env
+
+# Node (if frontend used)
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# Build / dist
+build/
+dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Mongo dump (if any)
+dump/
