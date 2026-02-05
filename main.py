@@ -9,13 +9,16 @@ from agent import generate_reply
 from intelligence import extract_intelligence
 from session_manager import get_session, update_session, should_finalize,update_intelligence,mark_scam_detected,mark_finalized
 from callback import send_final_callback
-
+from mangum import Mangum
 # ------------------ APP SETUP ------------------
 
 app = FastAPI(title="Agentic Honeypot API")
+
 @app.get("/")
-def read_root():
-    return {"status": "ok"}
+def root():
+    return {"status": "ok", "message": "FastAPI on Vercel"}
+
+handler = Mangum(app)
 # ------------------ CORS ------------------
 
 app.add_middleware(
