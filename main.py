@@ -13,7 +13,9 @@ from callback import send_final_callback
 # ------------------ APP SETUP ------------------
 
 app = FastAPI(title="Agentic Honeypot API")
-
+@app.get("/")
+def read_root():
+    return {"status": "ok"}
 # ------------------ CORS ------------------
 
 app.add_middleware(
