@@ -1,11 +1,9 @@
-# from google import genai
 import google.generativeai as genai
-
-from google.genai.errors import ClientError
+from google.api_core.exceptions import GoogleAPIError
 from config import GEMINI_API_KEY, MODEL_NAME
 
-# Create Gemini client
-client = genai.Client(api_key=GEMINI_API_KEY)
+# Configure Gemini (ONCE, at import time)
+genai.configure(api_key=GEMINI_API_KEY)
 
 SYSTEM_PROMPT = """
 You are a normal Indian user who believes the person messaging you is genuine
@@ -22,7 +20,7 @@ Your goals:
   * steps to "verify"
 - Keep replies short (1–2 lines)
 - Never say you are an AI
-- if the all possible info is extracted, politely end the conversation with let's end
+- if all possible info is extracted, politely end the conversation with let's end
 """
 
 FALLBACK_REPLIES = [
@@ -33,9 +31,13 @@ FALLBACK_REPLIES = [
     "What is the process to verify?"
 ]
 
-prompt_normal = "You are a normal Indian user chatting with a person. Sound natural and human. Keep replies short (1–2 lines). Do NOT accuse or detect scam. Just chat casually.\n\n"
+prompt_normal = (
+    "You are a normal Indian user chatting with a person. "
+    "Sound natural and human. Keep replies short (1–2 lines). "
+    "Do NOT accuse or detect scam. Just chat casually.\n\n"
+)
 
-def generate_reply(latest_message: str, history: list,scam:bool) -> str:
+def generate_reply(latest_message: str, history: list, scam: bool) -> str:
     if scam:
         conversation_text = SYSTEM_PROMPT + "\n\nConversation so far:\n"
     else:
@@ -44,16 +46,17 @@ def generate_reply(latest_message: str, history: list,scam:bool) -> str:
     for msg in history:
         role = "Scammer" if msg["sender"] == "scammer" else "User"
         conversation_text += f"{role}: {msg['text']}\n"
+
     conversation_text += f"\nScammer: {latest_message}\nUser:"
 
     try:
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=conversation_text
-        )
+        model = genai.GenerativeModel(MODEL_NAME)
+        response = model.generate_content(conversation_text)
         return response.text.strip()
 
-    except ClientError as e:
-        # Gemini quota or model error → graceful fallback
+    except GoogleAPIError:
+        # Gemini quota / API error → graceful fallback
         return FALLBACK_REPLIES[len(history) % len(FALLBACK_REPLIES)]
 
+    except Exception:
+        return FALLBACK_REPLIES[0]
