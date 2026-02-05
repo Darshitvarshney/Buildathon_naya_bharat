@@ -56,6 +56,20 @@ def update_session(session_id: str, message_obj: dict):
         }
     )
 
+def update_intelligence(session_id: str, intelligence: dict):
+    """
+    Persist extracted intelligence to MongoDB for a session.
+    This should be called AFTER extract_intelligence().
+    """
+
+    sessions_collection.update_one(
+        {"sessionId": session_id},
+        {
+            "$set": {
+                "intelligence": intelligence
+            }
+        }
+    )
 
 def mark_scam_detected(session_id: str):
     sessions_collection.update_one(
@@ -74,23 +88,17 @@ def update_intelligence(session_id: str, intelligence: dict):
     )
 
 
-def should_finalize(session: dict) -> bool:
+
+def should_finalize(session: dict, latest_text: str) -> bool:
     """
-    Decide when to end conversation & send callback.
+    Finalize only when conversation explicitly signals completion.
     """
+
     if session["finalized"]:
         return False
 
-    # Heuristics: finalize if enough messages or enough intelligence
-    if session["totalMessages"] >= 12:
-        return True
+    return detect_finalization(latest_text)
 
-    intel = session["intelligence"]
-
-    if intel["upiIds"] or intel["phishingLinks"] or intel["phoneNumbers"]:
-        return True
-
-    return False
 
 
 def mark_finalized(session_id: str):
@@ -98,3 +106,46 @@ def mark_finalized(session_id: str):
         {"sessionId": session_id},
         {"$set": {"finalized": True}}
     )
+
+FINALIZE_KEYWORDS = [
+    # completion
+    "done",
+    "completed",
+    "finished",
+    "all set",
+    "successfully",
+    "process complete",
+
+    # thanks / exit
+    "thank you",
+    "thanks",
+    "bye",
+    "goodbye",
+
+    # explicit termination
+    "end this conversation",
+    "end the conversation",
+    "let's end",
+    "let us end",
+    "stop chatting",
+    "no need to continue",
+    "close this",
+    "close the chat"
+]
+
+
+def detect_finalization(text: str) -> bool:
+    text = text.lower()
+
+    termination_verbs = ["end", "stop", "close", "finish"]
+    conversation_words = ["chat", "conversation", "talk", "session"]
+
+    # Direct phrase match
+    if any(k in text for k in FINALIZE_KEYWORDS):
+        return True
+
+    # Intent-based match
+    if any(v in text for v in termination_verbs) and any(c in text for c in conversation_words):
+        return True
+
+    return False

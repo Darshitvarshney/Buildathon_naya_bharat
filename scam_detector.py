@@ -18,7 +18,7 @@ SCAM_KEYWORDS = [
     "refund",
     "prize",
     "lottery",
-    "congratulations"
+    "congratulations","lucky draw","winner","winning","claim","redeem"
 ]
 
 # Patterns that indicate scam intent
@@ -64,4 +64,3 @@ def detect_scam(message_text: str, history: list) -> bool:
         return True
 
     return False
-

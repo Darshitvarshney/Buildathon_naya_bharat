@@ -20,6 +20,7 @@ Your goals:
   * steps to "verify"
 - Keep replies short (1–2 lines)
 - Never say you are an AI
+- if the all possible info is extracted, politely end the conversation with let's end
 """
 
 FALLBACK_REPLIES = [
@@ -30,14 +31,17 @@ FALLBACK_REPLIES = [
     "What is the process to verify?"
 ]
 
+prompt_normal = "You are a normal Indian user chatting with a person. Sound natural and human. Keep replies short (1–2 lines). Do NOT accuse or detect scam. Just chat casually.\n\n"
 
-def generate_reply(latest_message: str, history: list) -> str:
-    conversation_text = SYSTEM_PROMPT + "\n\nConversation so far:\n"
+def generate_reply(latest_message: str, history: list,scam:bool) -> str:
+    if scam:
+        conversation_text = SYSTEM_PROMPT + "\n\nConversation so far:\n"
+    else:
+        conversation_text = prompt_normal + "\n\nConversation so far:\n"
 
     for msg in history:
         role = "Scammer" if msg["sender"] == "scammer" else "User"
         conversation_text += f"{role}: {msg['text']}\n"
-    print(conversation_text)
     conversation_text += f"\nScammer: {latest_message}\nUser:"
 
     try:
@@ -50,3 +54,4 @@ def generate_reply(latest_message: str, history: list) -> str:
     except ClientError as e:
         # Gemini quota or model error → graceful fallback
         return FALLBACK_REPLIES[len(history) % len(FALLBACK_REPLIES)]
+

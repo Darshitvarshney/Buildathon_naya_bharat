@@ -7,7 +7,7 @@ from config import MONGO_URI, DB_NAME, SESSIONS_COLLECTION
 from scam_detector import detect_scam
 from agent import generate_reply
 from intelligence import extract_intelligence
-from session_manager import get_session, update_session, should_finalize
+from session_manager import get_session, update_session, should_finalize,update_intelligence,mark_scam_detected,mark_finalized
 from callback import send_final_callback
 
 # ------------------ APP SETUP ------------------
@@ -54,12 +54,13 @@ def honeypot_endpoint(payload: dict, x_api_key: str = Header(None)):
     # 1. Get session and history from DB
     session = get_session(session_id)
     history = session["messages"]
-
-    # 2. Save scammer message
     update_session(session_id, message_obj)
 
-    # 3. Generate agent reply using DB history
-    reply_text = generate_reply(text, history)
+    is_scam = detect_scam(text, history)
+
+    if is_scam:
+        mark_scam_detected(session_id)
+    reply_text = generate_reply(text, history,is_scam )
 
     # 4. Create agent message object
     agent_message = {
@@ -70,8 +71,22 @@ def honeypot_endpoint(payload: dict, x_api_key: str = Header(None)):
 
     # 5. Save agent reply
     update_session(session_id, agent_message)
+    extract_intelligence(message_obj["text"], session["intelligence"])
 
-    return {
-        "status": "success",
-        "reply": reply_text
-    }
+    # 4. SAVE intelligence back to MongoDB  ❗❗❗
+    update_intelligence(session_id, session["intelligence"])
+
+
+    if should_finalize(session, text) or should_finalize(session, reply_text):
+        send_final_callback(session_id, session)
+        mark_finalized(session_id)
+        
+    if session["finalized"]:
+        return {
+            "status": "finalized"
+            }
+    else:
+        return {
+            "status": "success",
+            "reply": reply_text
+        }
