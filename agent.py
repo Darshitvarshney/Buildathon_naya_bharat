@@ -1,4 +1,6 @@
-from google import genai
+# from google import genai
+import google.generativeai as genai
+
 from google.genai.errors import ClientError
 from config import GEMINI_API_KEY, MODEL_NAME
 
